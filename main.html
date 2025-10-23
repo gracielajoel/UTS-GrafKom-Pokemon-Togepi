@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Togepi → Togetic → Togekiss Evolution Scene</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #FFF8E7;
+      perspective: 800px; /* memberi efek kedalaman untuk 3D transform */
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      transition: opacity 1.5s ease;
+      transform-style: preserve-3d;
+    }
+
+    /* --- Urutan layer evolusi --- */
+    #environment {
+      z-index: 0;
+      opacity: 1;
+      pointer-events: auto; /* aktif untuk drag kamera */
+      transform: translateZ(0);
+    }
+
+    /* Pokemon Canvas */
+    #togepi,
+    #togetic,
+    #togekiss {
+      pointer-events: none; /* jangan blokir drag environment */
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      transform-origin: center center;
+      transition: opacity 1.5s ease;
+      /* sedikit mundur ke belakang dan lebih rendah supaya “napak” */
+      transform: translateY(13vh) translateZ(-80px) scale(0.9);
+      filter: brightness(1.05) contrast(1.05);
+    }
+
+    #togepi { z-index: 1; opacity: 1; }
+    #togetic { z-index: 2; opacity: 0; }
+    #togekiss { z-index: 3; opacity: 0; }
+
+    /* Bayangan lembut di bawah Pokemon */
+    .shadow {
+      position: absolute;
+      left: 50%;
+      bottom: 28vh;
+      transform: translateX(-50%) scale(1.1);
+      width: 10vh;
+      height: 5vh;
+      background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.25) 0%, transparent 70%);
+      border-radius: 50%;
+      filter: blur(6px);
+      opacity: 0.6;
+      z-index: 0.5;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Canvas urutan evolusi -->
+  <canvas id="environment"></canvas>
+  <canvas id="togepi"></canvas>
+  <canvas id="togetic"></canvas>
+  <canvas id="togekiss"></canvas>
+
+  <!-- Bayangan halus -->
+  <div class="shadow"></div>
+
+  <!-- ===== Script Library dan Main ===== -->
+  <script src="environmentlibs.js"></script>
+  <script src="environmentMain.js"></script>
+
+  <script src="togepiLibs.js"></script>
+  <script src="togepiMain.js"></script>
+
+  <script src="togeticLibs.js"></script>
+  <script src="togeticMain.js"></script>
+
+  <script src="togekissLibs.js"></script>
+  <script src="togekissMain.js"></script>
+
+  <script>
+    // === Jalankan environment lebih dulu ===
+    function runEnvironment() {
+      try {
+        if (typeof mainEnvironment === "function") {
+          mainEnvironment();
+          console.log("✅ Environment berjalan (kamera aktif, bisa drag mouse).");
+        } else {
+          console.error("❌ Fungsi mainEnvironment() tidak ditemukan.");
+        }
+      } catch (err) {
+        console.error("❌ Gagal menjalankan environment:", err);
+      }
+    }
+
+    // === Jalankan setiap fase evolusi ===
+    function runTogepi() { if (typeof mainTogepi === "function") mainTogepi(); }
+    function runTogetic() { if (typeof mainTogetic === "function") mainTogetic(); }
+    function runTogekiss() { if (typeof mainTogekiss === "function") mainTogekiss(); }
+
+    // === Urutan jalannya ===
+    window.onload = () => {
+    runEnvironment();
+
+    // waktu dasar dalam milidetik
+    const startDelay = 500;
+    const durTogepi  = 4400;
+    const durTogetic = 2400;
+    const durTogekiss = 12000;
+
+    // Jalankan semua animasi (Togetic & Togekiss siap tapi belum kelihatan)
+    setTimeout(() => {
+      runTogepi();
+      runTogetic();
+      runTogekiss();
+    }, startDelay);
+
+    // Transisi Togepi → Togetic
+    setTimeout(() => {
+      document.getElementById("togepi").style.opacity = 0;
+      document.getElementById("togetic").style.opacity = 1;
+    }, startDelay + durTogepi);
+
+    // Transisi Togetic → Togekiss
+    setTimeout(() => {
+      document.getElementById("togetic").style.opacity = 0;
+      document.getElementById("togekiss").style.opacity = 1;
+    }, startDelay + durTogepi + durTogetic);
+
+    // (Opsional) Togekiss fade out di akhir (misalnya setelah semua animasi selesai)
+    setTimeout(() => {
+      document.getElementById("togekiss").style.opacity = 0;
+    }, startDelay + durTogepi + durTogetic + durTogekiss);
+  };
+  </script>
+</body>
+</html>
