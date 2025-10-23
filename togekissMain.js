@@ -143,16 +143,44 @@ function mainTogekiss(offsetX =0) {
         return { vertices, faces };
     }
 
-    function generateCone(r, h, n, col) {
-        const vertices = [0, h, 0, 0, 1, 0, col[0], col[1], col[2]];
-        for (let i = 0; i <= n; i++) {
-            const ang = 2 * Math.PI * i / n;
-            const x = r * Math.cos(ang);
-            const z = r * Math.sin(ang);
-            vertices.push(x, 0, z, 0, 0, 1, col[0], col[1], col[2]);
-        }
+    function generateEllipticParaboloid(a, b, height, res, color, flip = false) {
+        const vertices = [];
         const faces = [];
-        for (let i = 1; i <= n; i++) faces.push(0, i, i + 1);
+
+        for (let i = 0; i <= res; i++) {
+            const v = i / res;
+            const r = v;
+            for (let j = 0; j <= res; j++) {
+                const theta = (j / res) * 2 * Math.PI;
+                const x = a * r * Math.cos(theta);
+                const y = b * r * Math.sin(theta);
+                const z = height * (1 - r * r); // Bagian tumpul di atas, runcing di bawah
+
+                const zz = flip ? -z : z;
+
+                // Normal
+                const nx = 2 * x / (a * a);
+                const ny = 2 * y / (b * b);
+                const nz = 1.0;
+                const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+
+                vertices.push(
+                    x, y, zz,
+                    nx / len, ny / len, nz / len,
+                    color[0], color[1], color[2]
+                );
+            }
+        }
+
+        for (let i = 0; i < res; i++) {
+            for (let j = 0; j < res; j++) {
+                const first = i * (res + 1) + j;
+                const second = first + res + 1;
+                faces.push(first, second, first + 1);
+                faces.push(second, second + 1, first + 1);
+            }
+        }
+
         return { vertices, faces };
     }
 
@@ -659,21 +687,34 @@ function mainTogekiss(offsetX =0) {
         {
             const wingGroup = [];
 
-            wingGroup.push(transformVertices(generateEllipsoid(1.4, 0.35, 0.7, 24, 24, white),
-                -1.45, -0.05, 0.0, 1, 0.6, 1.05, 0, 0.25, 0.65));
+            // bagian luar (besar) — diperpanjang & nempel ke badan
+            wingGroup.push(transformVertices(
+                generateEllipticParaboloid(0.8, 0.20, 2.3, 40, bodyColor, true),
+                -0.4, -0.10, 0.08,     // posisi pangkal mendekat ke badan
+                1.25, 1.05, 1.1,        // skala sedikit diperbesar (panjang)
+                Math.PI / 2.0,          // arah keluar kiri
+                0.20,                   // sedikit rotX angkat
+                0.35                    // rotZ tip ke belakang
+            ));
 
-            wingGroup.push(transformVertices(generateEllipsoid(0.95, 0.25, 0.45, 20, 20, white),
-                -1.25, -0.35, 0.0, 1.0, 0.7, 1.0, 0, 0.2, 0.55));
+            // bagian dalam (lebih kecil) — diturunkan ke bawah
+            wingGroup.push(transformVertices(
+                generateEllipticParaboloid(0.7, 0.20, 0.9, 36, bodyColor, true),
+                -1, -0.55, 0.02,     // diturunkan (ty lebih negatif)
+                1.0, 0.9, 1.0,
+                Math.PI / 2.0,
+                0.10,
+                0.25
+            ));
 
+            // garis pola NURBS tetap
             wingGroup.push(transformVertices(generateNURBSCurvePattern(-1, [0, 0, 0]),
-                0.01, -0.4, -0.55
+                0.01, -0.65, -0.55
             ));
 
             const wingRoot = [-1.2, 0.0, 0.0];
 
-            // rotasi seluruh grup sayap kiri (naik-turun alami)
             for (const part of wingGroup) {
-                // saat lompatan/terbang, tambahkan rotasi outwards sedikit (untuk takeoff feel)
                 const extra = (state === "jump" || state === "fly") ? -0.25 : 0.0;
                 const rotated = rotateVerticesAroundPoint(part, wingRoot, 0, 0, flapAngle + extra);
                 animatedParts.push(rotated);
@@ -684,14 +725,28 @@ function mainTogekiss(offsetX =0) {
         {
             const wingGroup = [];
 
-            wingGroup.push(transformVertices(generateEllipsoid(1.4, 0.35, 0.7, 24, 24, white),
-                1.45, -0.05, 0.0, 1, 0.6, 1.05, 0, 0.25, -0.65));
+            // bagian luar (besar)
+            wingGroup.push(transformVertices(
+                generateEllipticParaboloid(0.8, 0.20, 2.3, 40, bodyColor, true),
+                0.4, -0.10, 0.08,
+                1.25, 1.05, 1.1,
+                -Math.PI / 2.0,         // arah keluar kanan
+                0.20,
+                -0.35
+            ));
 
-            wingGroup.push(transformVertices(generateEllipsoid(0.95, 0.25, 0.45, 20, 20, white),
-                1.25, -0.35, 0.0, 1.0, 0.7, 1.0, 0, 0.2, -0.55));
+            // bagian dalam (lebih kecil) — diturunkan
+            wingGroup.push(transformVertices(
+                generateEllipticParaboloid(0.7, 0.15, 1.1, 36, bodyColor, true),
+                1, -0.55, 0.02,
+                1.0, 0.9, 1.0,
+                -Math.PI / 2.0,
+                0.10,
+                -0.25
+            ));
 
             wingGroup.push(transformVertices(generateNURBSCurvePattern(1, [0, 0, 0]),
-                0.01, -0.4, -0.55
+                0.01, -0.65, -0.55
             ));
 
             const wingRoot = [1.2, 0.0, 0.0];
